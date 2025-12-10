@@ -1,36 +1,33 @@
 # -*- coding: utf-8 -*-
 import pytest
-from src.Types import DataType
-from src.TextDataReader import TextDataReader
+from src.YamlDataReader import YamlDataReader
+from Types import DataType
+import tempfile
+import os
 
-
-class TestTextDataReader:
-
-    @pytest.fixture()
-    def file_and_data_content(self) -> tuple[str, DataType]:
-        text = "Иванов Константин Дмитриевич\n" + \
-               "    математика:91\n" + "    химия:100\n" + \
-               "Петров Петр Семенович\n" + \
-               "    русский язык:87\n" + "    литература:78\n"
-
-        data = {
-            "Иванов Константин Дмитриевич": [
-                ("математика", 91), ("химия", 100)
-            ],
-            "Петров Петр Семенович": [
-                ("русский язык", 87), ("литература", 78)
-            ]
-        }
-        return text, data
+class TestYamlDataReader:
 
     @pytest.fixture()
-    def filepath_and_data(self,
-                          file_and_data_content: tuple[str, DataType],
-                          tmpdir) -> tuple[str, DataType]:
-        p = tmpdir.mkdir("datadir").join("my_data.txt")
-        p.write_text(file_and_data_content[0], encoding='utf-8')
-        return str(p), file_and_data_content[1]
+    def sample_yaml_file(self):
+        content = """
+Иванов Иван Иванович:
+  математика: 80
+  литература: 76
+  программирование: 100
+Петров Петр Петрович:
+  математика: 61
+  литература: 80
+  программирование: 78
+  химия: 97
+"""
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".yaml")
+        tmp_file.write(content.encode("utf-8"))
+        tmp_file.close()
+        yield tmp_file.name
+        os.unlink(tmp_file.name)
 
-    def test_read(self, filepath_and_data: tuple[str, DataType]) -> None:
-        file_content = TextDataReader().read(filepath_and_data[0])
-        assert file_content == filepath_and_data[1]
+    def test_read_yaml(self, sample_yaml_file):
+        reader = YamlDataReader()
+        data = reader.read(sample_yaml_file)
+        assert "Иванов Иван Иванович" in data
+        assert len(data["Иванов Иван Иванович"]) == 3
